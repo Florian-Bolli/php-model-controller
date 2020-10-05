@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $cat = new Cat();
 
     try {
-        $cat->retreive_by_id($id);
-        $cat->print();
+        $cat->retreive($id);
+        echo $cat->text();
     } catch (Exception $e) {
         print("Error. $e No cat with id $id.");
     }
