@@ -1,0 +1,4 @@
+.vscode/
+phpmyadmin/
+
+database/config.php
