@@ -65,8 +65,10 @@ class Model
 	 * retreives ojbect by id from database
 	 * Overwrites all atributes of the initialized object with data from DB
 	 */
-    public function retreive($id)
+    public function retreive($id=NULL)
 	{
+		if($id == NULL) $id = $this->id;
+		
         $sql = "SELECT * FROM $this->table_name WHERE id = ?;";
 		if($stmt = $this->db->prepare($sql)){
 			$stmt->bind_param("i", $id);

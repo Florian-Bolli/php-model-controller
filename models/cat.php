@@ -21,6 +21,11 @@ class Cat extends Model{
         parent::__construct($this->table_name);
     }
 
+    public function increase_weight($delta){
+        $sql = "UPDATE `cats` SET `weight` = weight + $delta WHERE `cats`.`id` = $this->id; ";
+        return $this->query($sql);
+    }
+
     
 
   
