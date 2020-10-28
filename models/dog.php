@@ -1,9 +1,11 @@
 <?php
 
-require_once __DIR__.'/model.php';
 
-class Dog extends Model{
-    public $table_name = "dogs";
+require_once __DIR__ . '/ModelBase.php';
+require_once __DIR__ . '/ModelsBase.php';
+
+class Dog extends ModelBase
+{
 
     //properties
     public $id;                 //int(11)
@@ -17,10 +19,17 @@ class Dog extends Model{
     //endproperties
 
 
-    public function __construct()
+    public function __construct($object)
     {
-        parent::__construct($this->table_name);
-    } 
+        $this->overwrite_atributes($object);
+        parent::__construct("dogs");
+    }
 }
 
-?>
+
+
+class Dogs extends ModelsBase
+{
+    protected static $table_name = "dogs";
+    protected static $object_name = "Dog";
+}

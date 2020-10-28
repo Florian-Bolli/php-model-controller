@@ -4,14 +4,14 @@
 // This is the start of refactoring:
 // Database requests newer than 2020-06-10 should be functions of this class
 //
-   
- 
-class Database 
+
+
+class Database
 {
-	private $connection;
+	public $connection;
 
 	public function __construct()
-	{ 
+	{
 		$this->open_connection();
 	}
 
@@ -34,7 +34,7 @@ class Database
 			unset($this->connection);
 		}
 	}
- 
+
 	public function query($sql)
 	{
 		$result = mysqli_query($this->connection, $sql);
@@ -56,13 +56,15 @@ class Database
 		}
 	}
 
-	public function prepare($sql){
+	public function prepare($sql)
+	{
 		$stmt = $this->connection->prepare($sql);
 		return $stmt;
 	}
 
-	public function does_table_exist($table_name){
-		if (mysqli_query($this->connection, "DESCRIBE `$table_name`" )){
+	public function does_table_exist($table_name)
+	{
+		if (mysqli_query($this->connection, "DESCRIBE `$table_name`")) {
 			return true;
 		}
 		return false;
