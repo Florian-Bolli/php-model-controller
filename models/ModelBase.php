@@ -63,6 +63,24 @@ class ModelBase
 	}
 
 
+	/**
+	 * Overwrites object atributes with data from databsae
+	 */
+	public function retreive($id = null)
+	{
+		if ($id == null) $id = $this->id;
+		$sql = "SELECT * FROM $this->table_name WHERE id = ?;";
+		if ($stmt = $this->db->prepare($sql)) {
+			$stmt->bind_param("i", $id);
+			$stmt->execute();
+			$result = $stmt->get_result();
+		}
+		if ($result->num_rows != 0) {
+			$attributes = (object) $result->fetch_assoc();
+			$this->overwrite_atributes($attributes);
+		}
+	}
+
 
 	/**
 	 * Update all propertys of the initialized object in the DB
@@ -82,7 +100,6 @@ class ModelBase
 
 		$sql = substr($sql, 0, -2);
 		$sql .= " WHERE `$this->table_name`.`id` = $this->id;";
-
 		$result = $this->db->query($sql);
 		return $result;
 	}

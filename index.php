@@ -14,7 +14,19 @@ header("Access-Control-Allow-Methods: OPTIONS,GET,POST,PUT,DELETE");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
+//Authentification
+require_once __DIR__ . "/controllers/auth_controller.php";
+$auth_controller = new AuthController($request_method, null);
+$auth_controller->set_logged_in_id();
+
 //Cut URI into arguments
+//The URI either has the form
+//  https://sample.florianbolli.ch/{object}/{id}/{action}
+//  or 
+//  https://sample.florianbolli.ch/{object}/{action} 
+//  depending on the controller class
+
+
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = explode('/', $uri);
 $request_method = $_SERVER['REQUEST_METHOD'];
@@ -24,13 +36,18 @@ $object = $uri[1];
 $id = isset($uri[2]) ? $uri[2] : NULL;
 $request_type = isset($uri[3]) ? $uri[3] : NULL;
 
-if($object == Null) showIndexPage();
+if ($object == Null) showIndexPage();
 
 //Initiate controllers depending on the object type
 switch ($object) {
+    case 'auth':
+        require_once __DIR__ . "/controllers/auth_controller.php";
+        $request_type = isset($uri[2]) ? $uri[2] : NULL;
+        $auth_controller->process_request($request_type);
+        break;
     case 'cats':
         require_once __DIR__ . "/controllers/cat_controller.php";
-        $controller = new CatController($request_method, $id);
+        $controller = new CatController($request_method, $id, $auth_controller);
         $controller->process_request($request_type);
         break;
     case 'dogs':
@@ -43,11 +60,10 @@ switch ($object) {
 
 
 /**If there is no request, just show some API information */
-function showIndexPage(){ 
+function showIndexPage()
+{
     header("Content-Type: HTML");
 ?>
-
-
 <html>
 
 <head>
@@ -58,8 +74,6 @@ function showIndexPage(){
     <h1>This is the API for Sample</h1>
     Check out the <a href="example.php">example</a>
 </body>
+
 </html>
-
- 
 <?php } ?>
-

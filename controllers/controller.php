@@ -9,6 +9,7 @@ class Controller
     //Request properties
     private $request_method;
     private $object;
+    private $objects;
     private $id;
 
     //Rights
@@ -18,10 +19,11 @@ class Controller
     public $right_update;
     public $right_delete;
 
-    function __construct($object, $request_method, $id)
+    function __construct($object, $objects, $request_method, $id)
     {
         $this->request_method = $request_method;
         $this->object = $object;
+        $this->objects = $objects;
         $this->id = $id;
     }
 
@@ -70,14 +72,14 @@ class Controller
         if (!$this->right_get) $this->notAuthorized();
 
         try {
-            $this->object->retreive($id);
-            echo $this->object->text();
+            $object = $this->objects->get_by_id($id);
+            echo $object->text();
         } catch (Exception $e) {
             print("Error. $e No cat with id $id.");
         }
     }
 
-     /** Save a new object into DB, with the declared atributes */
+    /** Save a new object into DB, with the declared atributes */
     function create()
     {
         if (!$this->right_create) $this->notAuthorized();
@@ -92,15 +94,6 @@ class Controller
 
 
 
-    /** Outputs a list of all stored objects */
-    function index()
-    {
-        if (!$this->right_index) $this->notAuthorized();
-
-        $cats = $this->object->get_all();
-        echo json_encode($cats);
-    }
-
 
     function update()
     {
@@ -109,6 +102,7 @@ class Controller
         $post = json_decode(file_get_contents('php://input'), true);
         $this->object->overwrite_atributes($post);
         try {
+            echo json_encode($this->object);
             $this->object->update();
             $object_name = get_class($this->object);
             echo "Success. $object_name has been updated.";
@@ -123,16 +117,34 @@ class Controller
     {
         if (!$this->right_delete) $this->notAuthorized();
 
-        $this->object->delete_by_id($id);
         $object_name = get_class($this->object);
+        $this->objects->delete_by_id($id);
         echo "Success. $object_name with id $id has been deleted.";
     }
 
 
-    //Standard outputs
+    /** Outputs a list of all stored objects */
+    function index()
+    {
+        if (!$this->right_index) $this->notAuthorized();
+
+        $cats = $this->objects->get_all();
+        echo json_encode($cats);
+    }
+
+
+
+    //Standard outputs$
+    function notAuthenticated()
+    {
+        echo '{"Error": "Not authenticated"}';
+        die();
+    }
+
     function notAuthorized()
     {
         echo '{"Error": "Not authorized"}';
+        http_response_code(403);
         die();
     }
 
