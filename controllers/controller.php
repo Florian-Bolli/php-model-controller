@@ -1,31 +1,13 @@
 <?php
 
+require_once __DIR__ . '/../functions/ErrorHandler.php';
+require_once __DIR__ . '/../functions/Response.php';
+
 /**
  * Object Controllers reachable through the API should extend the Controller class, to add standard functions and the process_request function
  */
 class Controller
 {
-
-    //Request properties
-    private $request_method;
-    private $object;
-    private $objects;
-    private $id;
-
-    //Rights
-    public $right_create;
-    public $right_get;
-    public $right_index;
-    public $right_update;
-    public $right_delete;
-
-    function __construct($object, $objects, $request_method, $id)
-    {
-        $this->request_method = $request_method;
-        $this->object = $object;
-        $this->objects = $objects;
-        $this->id = $id;
-    }
 
     /**
      * Processes the standard requests: 
@@ -34,107 +16,93 @@ class Controller
      */
     function process_request($request_type)
     {
-
         //Non standard request
         if ($request_type != NULL) {
             if (method_exists($this, $request_type)) {
-                $this->$request_type();
+                try {
+                    $this->$request_type();
+                } catch (ResponseException $e) {
+                    ErrorHandler::handleExceptionAndDie($e);
+                }
                 return;
             } else {
                 $this->functionDoesNotExist();
             }
         }
-        //Standard requests
-        switch ($this->request_method) {
-            case "POST":
-                $this->create();
-                break;
-            case "GET":
-                if ($this->id) {
-                    $this->get($this->id);
-                } else {
-                    $this->index();
-                };
-                break;
-            case "PUT":
-                $this->update();
-                break;
-            case "DELETE":
-                $this->delete($this->id);
-                break;
+    }
+
+    // Respond standard request to api_endpoint
+    // The function has to be implemented in a controller named "function_name_request" and has to reveice ($post, $get, $auth_controller)
+    // The api endpoint has to return a Response object, which is echoed here
+    function respond_request($funcion_name)
+    {
+        $post = (object)json_decode(file_get_contents('php://input'), true);
+        $get = (object)$_GET;
+        $auth_controller = new AuthController();
+
+        //Non standard request
+        if ($funcion_name != NULL) {
+            $funcion_name = $funcion_name . "_request";
+            if (method_exists($this, $funcion_name)) {
+                try {
+                    $response = $this->$funcion_name($post, $get, $auth_controller);
+                    if ($response instanceof Response) {
+                        echo $response;
+                    } else {
+                        ErrorHandler::throwError("No response object");
+                    }
+                } catch (ResponseException $e) {
+                    ErrorHandler::handleExceptionAndDie($e);
+                }
+                return;
+            } else {
+                $this->functionDoesNotExist();
+            }
         }
     }
 
-
-    /** Outputs one single object from DB (with id) */
-    function get($id)
+    // Check if all required vars occur in the request object
+    public static function checkRequiredVars(object $object, array $required_vars)
     {
-        if (!$this->right_get) $this->notAuthorized();
-
-        try {
-            $object = $this->objects->get_by_id($id);
-            echo $object->text();
-        } catch (Exception $e) {
-            print("Error. $e No cat with id $id.");
+        foreach ($required_vars as $var) {
+            if (!isset($object->$var)) {
+                ErrorHandler::throwException("required variables: " . json_encode($required_vars), "invalidArguments");
+            }
         }
     }
 
-    /** Save a new object into DB, with the declared atributes */
-    function create()
+    // Set optional vars of request object to null if they are nor defined
+    public static function checkOptionalVars(object $object, array $optional_vars)
     {
-        if (!$this->right_create) $this->notAuthorized();
-
-        $post = json_decode(file_get_contents('php://input'), true);
-        $this->object->overwrite_atributes($post);
-        if ($id = $this->object->save()) {
-            $object_name = get_class($this->object);
-            echo "Success. $object_name saved with id $id.";
+        foreach ($optional_vars as $var) {
+            $object->$var = isset($object->$var) ? $object->$var : null;
         }
+        return $object;
     }
 
-
-
-
-    function update()
+    // Remove all variables of the request object that are not defined in required_vars or optional_vars
+    public static function removeRedundantVars(object $object, $required_vars, $optional_vars)
     {
-        if (!$this->right_update) $this->notAuthorized();
-
-        $post = json_decode(file_get_contents('php://input'), true);
-        $this->object->overwrite_atributes($post);
-        try {
-            echo json_encode($this->object);
-            $this->object->update();
-            $object_name = get_class($this->object);
-            echo "Success. $object_name has been updated.";
-        } catch (Exception $e) {
-            echo "Error: $e";
+        $possible_vars = array_merge($required_vars, $optional_vars);
+        foreach ($object as $key => $value) {
+            $key = strval($key);
+            if (!in_array($key, $possible_vars)) {
+                unset($object->$key);
+            }
         }
+        return $object;
     }
 
-
-    /** Deletes the object with ID from DB */
-    function delete($id)
+    // Returns a clean object, that contains and contains only required and optional vars
+    public static function checkVars(object $object, array $required_vars, array $optional_vars = [])
     {
-        if (!$this->right_delete) $this->notAuthorized();
-
-        $object_name = get_class($this->object);
-        $this->objects->delete_by_id($id);
-        echo "Success. $object_name with id $id has been deleted.";
+        self::checkRequiredVars($object, $required_vars);
+        $object = self::removeRedundantVars($object, $required_vars, $optional_vars);
+        $object = self::checkOptionalVars($object, $optional_vars);
+        return $object;
     }
 
-
-    /** Outputs a list of all stored objects */
-    function index()
-    {
-        if (!$this->right_index) $this->notAuthorized();
-
-        $cats = $this->objects->get_all();
-        echo json_encode($cats);
-    }
-
-
-
-    //Standard outputs$
+    // Standard outputs$
     function notAuthenticated()
     {
         echo '{"Error": "Not authenticated"}';

@@ -1,5 +1,11 @@
 {
+    "name": "maksym/api",
+    "description": "API for Maksym",
+    "license": "proprietary",
     "require": {
-        "phpunit/phpunit": "^9.4"
+        "phpunit/phpunit": "^9.2"
+    },
+    "scripts": {
+        "test": "./vendor/bin/phpunit"
     }
 }
